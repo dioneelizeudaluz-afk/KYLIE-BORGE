@@ -1,9 +1,11 @@
-import { supabase } from "../lib/supabase";
+import { requireSupabase } from "../lib/supabase";
 import type { Database } from "../types/database";
 
 export type Plan = Database["public"]["Tables"]["plans"]["Row"];
 
 export async function listActivePlans(): Promise<Plan[]> {
+  const supabase = requireSupabase();
+
   const { data, error } = await supabase
     .from("plans")
     .select("*")
