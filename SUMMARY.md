@@ -17,77 +17,79 @@ Plataforma web privada de conteudo premium, com area publica/cliente e area admi
 ## 3. Estado actual
 
 - FASE 1 concluida.
-- FASE 2 concluida:
-  - `@supabase/supabase-js` adicionado.
-  - `src/lib/supabase.ts` (cliente tipado, valida env vars).
-  - `src/types/database.ts` (Database tipado).
-  - `src/services/planService.ts` (`listActivePlans`).
-  - `src/pages/Plans.tsx` consome dados reais (loading / error / empty / ready).
-  - Migrations em `supabase/migrations/`:
-    - `0001_init_schema.sql`
-    - `0002_rls_policies.sql`
-    - `0003_storage_buckets.sql`
-    - `0004_seed_defaults.sql`
-  - `.env.example` actualizado.
-  - `README.md` e `SUMMARY.md` actualizados.
+- FASE 2 concluida.
+- FASE 3 concluida:
+  - `src/auth/AuthContext.tsx` + `src/auth/useAuth.ts`.
+  - `src/services/profileService.ts` (`getProfile`, `updateProfile`).
+  - `src/components/LoadingScreen.tsx`, `src/components/ProtectedRoute.tsx`, `src/components/AdminRoute.tsx`.
+  - `src/layouts/AuthLayout.tsx`.
+  - `src/pages/auth/Login.tsx`, `Register.tsx`, `ForgotPassword.tsx`, `ResetPassword.tsx`, `DashboardPlaceholder.tsx`.
+  - `src/layouts/PublicLayout.tsx` com estado de sessao.
+  - `src/routes/AppRoutes.tsx` actualizado.
+  - `src/App.tsx` envolve com `AuthProvider`.
 
 ## 4. Decisoes tecnicas
 
-- Tailwind v3 (nao v4).
-- Sem aliases de import. Sem `@types/node`.
-- Sem `tsconfig.node.json`. `build`: `vite build`.
-- Enums representados por `text` + `check` (facilita evolucao sem `ALTER TYPE`).
-- Hierarquia de planos via `plans.level` (integer). Evita parsing de JSON em SQL.
-- Funcoes helper `is_admin`, `user_max_plan_level`, `user_can_access_plan` — todas `SECURITY DEFINER` com `search_path` fixo.
-- Trigger `handle_new_user` cria `profiles` automaticamente.
-- Buckets privados excepto `covers`.
-- **Entrega de conteudo protegido via Edge Function em fase futura** (signed URL). Nao replicamos logica de subscription nas policies de storage.
+- `AuthProvider` subscreve `onAuthStateChange` ANTES de `getSession()` (evita race condition).
+- `useAuth` lanca erro claro se usado fora do provider.
+- `ProtectedRoute` guarda `state.from` para redireccionar de volta apos login.
+- `AdminRoute` verifica `profile.role === 'admin'`.
+- `updateProfile` NUNCA envia `role` no payload.
+- `detectSessionInUrl: true` permite que `/reset-password` funcione com o link do email.
+- `/reset-password` mostra mensagem de link invalido se nao houver sessao.
 
-## 5. Schema (resumo)
+## 5. Schema (inalterado desde FASE 2)
 
-- `profiles` — ligada a `auth.users` via `user_id` unique.
-- `plans` — `slug` unique, `level` integer, `permissions` jsonb.
-- `subscriptions` — `status` em (active, expired, cancelled, pending), `expires_at`.
-- `contents` — `content_type` em (video, photo, audio), `required_plan_id` opcional, `published`.
-- `videos` / `photos` / `audios` — 1:1 com `contents`.
-- `payments` — `external_payment_id` unique quando nao nulo.
-- `access_codes` — `code` unique, `status` em (available, used, disabled, expired).
-- `platform_settings` — `key` unique, `value` jsonb.
+Tabelas: `profiles`, `plans`, `subscriptions`, `contents`, `videos`, `photos`, `audios`, `access_codes`, `payments`, `platform_settings`.
 
-## 6. RLS (resumo)
+## 6. Rotas
 
-- `profiles`: user ve/edita o seu; `role` nao editavel por user.
-- `plans`: leitura publica dos activos; escrita admin.
-- `subscriptions` / `payments` / `access_codes`: user ve os seus; admin tudo.
-- `contents` / `videos` / `photos` / `audios`: leitura so com acesso ao plano (via `user_can_access_plan`) ou admin; escrita admin.
-- `platform_settings`: leitura publica; escrita admin.
-- Storage: admin faz tudo nos buckets privados e `covers`; leitura publica apenas em `covers`.
+- `/` — Landing
+- `/age-gate` — Confirmacao +18
+- `/plans` — Planos
+- `/login`, `/register`, `/forgot-password`, `/reset-password` — Auth
+- `/dashboard` — Protegido (placeholder)
+- `*` — 404
 
-## 7. Storage
+## 7. Definir admin
 
-Buckets: `videos`, `photos`, `audios`, `thumbnails` (privados); `covers` (publico).
+```sql
+update public.profiles set role = 'admin' where user_id = '<uuid>';
+```
 
-## 8. Seed
+## 8. EscalePay — estado
 
-- Planos: `free`, `teste`, `pro`, `premium` (levels 0..3).
-- `platform_settings`: `hero_title`, `hero_subtitle`, `hero_cta`, `age_gate_text`, `teaser_seconds`.
+Documentacao analisada:
 
-## 9. Pendencias conhecidas
+- Webhook: `POST application/json`.
+- Auth: HMAC-SHA256 (`X-EscalePay-Signature`) OU token estatico (`X-Webhook-Secret`). Ambiguidade na doc → backend aceitara ambos.
+- Eventos: `payment_confirmed`, `payment_pending`, `payment_refused`, `subscription_cancelled`, `subscription_reactivated`, `refund_completed`, `chargeback_received`.
+- Payload base: `{ event, order_id, timestamp, source, version, webhook_id, test, customer, product, payment, order_bumps }`.
+- Teste: numeros `258840000001` (confirmado), `258840000002` (pendente), `258840000003–008` (recusado). Campo `test: true` identifica-os.
+- Reenvios: ate 3 tentativas (5, 30, 60 min).
+- API REST existe (Bearer Token) mas endpoints nao vistos na doc.
 
-- Edge Function para entrega de signed URLs (fase de conteudos).
-- EscalePay: nenhuma API definida. Requer documentacao oficial.
-- Videochamadas: arquitectura futura.
-- `platform_settings` ainda nao consumida na Landing (constantes locais em `src/lib/constants.ts`). Sera ligada na FASE 4.
+Pendencias:
 
-## 10. Proximos passos (FASE 3)
+- `product.id` real de cada produto EscalePay (para mapear em `plans.escalepay_product_id`).
+- Se o URL de checkout aceita `?ref=` ou metadata.
+- Envio de email (codigo de acesso) — servico a definir.
 
-- AuthContext / hook `useAuth`.
-- Paginas: `/login`, `/register`, `/forgot-password`.
-- `ProtectedRoute` e `AdminRoute`.
-- Ligacao com `supabase.auth`.
-- Redireccionamento pos-login.
+## 9. Proximos passos
 
-## 11. Regras a respeitar
+- FASE 3.5: `plans.checkout_url`, `/checkout-return`, `/redeem`, funcao SQL `redeem_access_code`.
+- FASE 4: Landing dinamica via `platform_settings`, teaser, paywall.
+- FASE 5: Conteudos (upload, Storage, signed URLs via Edge Function).
+- FASE 6: Subscriptions + permissao central.
+- FASE 7: Dashboard, library, player, profile.
+- FASE 8: Codes (geracao, activacao, expiracao).
+- FASE 9: Admin completo.
+- FASE 10: Webhook EscalePay (Edge Function) + geracao automatica de codigo.
+- FASE 11: Videochamadas (arquitectura).
+- FASE 12: Seguranca, responsivo, performance.
+- FASE 13: README/SUMMARY finais.
+
+## 10. Regras a respeitar
 
 - Nao inventar APIs, endpoints, webhooks, credenciais.
 - Nao hardcode de precos nos componentes.
@@ -95,3 +97,5 @@ Buckets: `videos`, `photos`, `audios`, `thumbnails` (privados); `covers` (public
 - Mobile-first.
 - Nao usar roxo; azul nao e cor principal.
 - Conteudo protegido: sempre via signed URLs (Edge Function).
+- Aceitar ambos os headers da EscalePay por robustez (doc tem inconsistencia).
+- Ignorar `test: true` em producao.
