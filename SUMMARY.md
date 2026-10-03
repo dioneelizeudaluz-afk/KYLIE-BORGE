@@ -11,71 +11,87 @@ Plataforma web privada de conteudo premium, com area publica/cliente e area admi
 - React + TypeScript + Vite
 - Tailwind CSS v3
 - React Router v6
-- Supabase (FASE 2+)
-- PostgreSQL
+- Supabase (cliente, auth, storage)
+- PostgreSQL (via Supabase)
 
-## 3. Estado atual
+## 3. Estado actual
 
 - FASE 1 concluida.
-- Ficheiros criados:
-  - `package.json`, `vite.config.ts`, `tsconfig.json`
-  - `tailwind.config.js`, `postcss.config.js`
-  - `index.html`, `public/favicon.svg`, `public/og-image.svg`
-  - `.env.example`, `.gitignore`
-  - `src/main.tsx`, `src/App.tsx`, `src/index.css`, `src/vite-env.d.ts`
-  - `src/lib/constants.ts`
-  - `src/types/index.ts`
-  - `src/components/Logo.tsx`
-  - `src/components/ui/Container.tsx`, `src/components/ui/Button.tsx`
-  - `src/layouts/PublicLayout.tsx`
-  - `src/pages/Landing.tsx`, `src/pages/AgeGate.tsx`, `src/pages/Plans.tsx`, `src/pages/NotFound.tsx`
-  - `src/routes/AppRoutes.tsx`
+- FASE 2 concluida:
+  - `@supabase/supabase-js` adicionado.
+  - `src/lib/supabase.ts` (cliente tipado, valida env vars).
+  - `src/types/database.ts` (Database tipado).
+  - `src/services/planService.ts` (`listActivePlans`).
+  - `src/pages/Plans.tsx` consome dados reais (loading / error / empty / ready).
+  - Migrations em `supabase/migrations/`:
+    - `0001_init_schema.sql`
+    - `0002_rls_policies.sql`
+    - `0003_storage_buckets.sql`
+    - `0004_seed_defaults.sql`
+  - `.env.example` actualizado.
+  - `README.md` e `SUMMARY.md` actualizados.
 
 ## 4. Decisoes tecnicas
 
-- Tailwind v3 (nao v4) para estabilidade e config previsivel.
-- Sem aliases de import (`@/`). Importacoes relativas. Evita `@types/node`.
-- Sem `tsconfig.node.json`.
-- `vite.config.ts` nao usa APIs Node.
-- `build`: `vite build` (sem `tsc -b`).
-- Sem `@supabase/supabase-js` na FASE 1: nenhum ficheiro o importa.
-- Sem `@types/node`.
-- Logo em SVG com `<text>` usando Google Fonts (Great Vibes + Bebas Neue) e fallback cursive/sans.
-- `Plans.tsx` mostra estrutura vazia (skeleton) para nao hardcode de precos.
-- Textos de Landing e Age Gate centralizados em `src/lib/constants.ts`.
+- Tailwind v3 (nao v4).
+- Sem aliases de import. Sem `@types/node`.
+- Sem `tsconfig.node.json`. `build`: `vite build`.
+- Enums representados por `text` + `check` (facilita evolucao sem `ALTER TYPE`).
+- Hierarquia de planos via `plans.level` (integer). Evita parsing de JSON em SQL.
+- Funcoes helper `is_admin`, `user_max_plan_level`, `user_can_access_plan` — todas `SECURITY DEFINER` com `search_path` fixo.
+- Trigger `handle_new_user` cria `profiles` automaticamente.
+- Buckets privados excepto `covers`.
+- **Entrega de conteudo protegido via Edge Function em fase futura** (signed URL). Nao replicamos logica de subscription nas policies de storage.
 
-## 5. Rotas existentes
+## 5. Schema (resumo)
 
-- `/`
-- `/age-gate`
-- `/plans`
-- `*` (404)
+- `profiles` — ligada a `auth.users` via `user_id` unique.
+- `plans` — `slug` unique, `level` integer, `permissions` jsonb.
+- `subscriptions` — `status` em (active, expired, cancelled, pending), `expires_at`.
+- `contents` — `content_type` em (video, photo, audio), `required_plan_id` opcional, `published`.
+- `videos` / `photos` / `audios` — 1:1 com `contents`.
+- `payments` — `external_payment_id` unique quando nao nulo.
+- `access_codes` — `code` unique, `status` em (available, used, disabled, expired).
+- `platform_settings` — `key` unique, `value` jsonb.
 
-## 6. Design tokens
+## 6. RLS (resumo)
 
-Em `tailwind.config.js`: cores `kb-*`, fontes `sans`/`display`/`script`, sombras `glow`/`soft`, gradientes `kb-radial`/`kb-fade`, animacoes `fade-up`/`fade-in`.
+- `profiles`: user ve/edita o seu; `role` nao editavel por user.
+- `plans`: leitura publica dos activos; escrita admin.
+- `subscriptions` / `payments` / `access_codes`: user ve os seus; admin tudo.
+- `contents` / `videos` / `photos` / `audios`: leitura so com acesso ao plano (via `user_can_access_plan`) ou admin; escrita admin.
+- `platform_settings`: leitura publica; escrita admin.
+- Storage: admin faz tudo nos buckets privados e `covers`; leitura publica apenas em `covers`.
 
-## 7. Proximos passos (FASE 2)
+## 7. Storage
 
-- Adicionar `@supabase/supabase-js`.
-- Criar `src/lib/supabase.ts`.
-- Criar tipos Supabase (`src/types/database.ts`).
-- Migrations SQL: `profiles`, `plans`, `subscriptions`, `contents`, `videos`, `photos`, `audios`, `access_codes`, `payments`, `platform_settings`.
-- RLS.
-- Buckets Storage: `videos`, `photos`, `audios`, `thumbnails`, `covers`.
-- Servicos de Storage em `src/services/`.
+Buckets: `videos`, `photos`, `audios`, `thumbnails` (privados); `covers` (publico).
 
-## 8. Pendencias conhecidas
+## 8. Seed
 
+- Planos: `free`, `teste`, `pro`, `premium` (levels 0..3).
+- `platform_settings`: `hero_title`, `hero_subtitle`, `hero_cta`, `age_gate_text`, `teaser_seconds`.
+
+## 9. Pendencias conhecidas
+
+- Edge Function para entrega de signed URLs (fase de conteudos).
 - EscalePay: nenhuma API definida. Requer documentacao oficial.
-- Videochamadas: arquitetura futura (WebRTC ou servico externo).
-- `platform_settings`: ainda nao usada; textos vivem em `constants.ts`.
+- Videochamadas: arquitectura futura.
+- `platform_settings` ainda nao consumida na Landing (constantes locais em `src/lib/constants.ts`). Sera ligada na FASE 4.
 
-## 9. Regras a respeitar
+## 10. Proximos passos (FASE 3)
+
+- AuthContext / hook `useAuth`.
+- Paginas: `/login`, `/register`, `/forgot-password`.
+- `ProtectedRoute` e `AdminRoute`.
+- Ligacao com `supabase.auth`.
+- Redireccionamento pos-login.
+
+## 11. Regras a respeitar
 
 - Nao inventar APIs, endpoints, webhooks, credenciais.
 - Nao hardcode de precos nos componentes.
 - Autorizacao real apenas no Supabase (RLS).
 - Mobile-first.
 - Nao usar roxo; azul nao e cor principal.
-- Conteudo protegido: sempre via signed URLs, nunca URLs publicas permanentes.
+- Conteudo protegido: sempre via signed URLs (Edge Function).
