@@ -1,0 +1,79 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: #0a0508;
+  color: #ffffff;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: rgba(233, 75, 138, 0.35);
+  color: #ffffff;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0508;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2a141c;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #e94b8a;
+}
+
+@layer components {
+  .glass {
+    background: rgba(26, 13, 19, 0.55);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(233, 75, 138, 0.12);
+  }
+
+  .card-premium {
+    @apply rounded-3xl border border-kb-line bg-kb-card/70 shadow-soft;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-medium transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-kb-rose/40 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply btn bg-kb-rose text-white hover:bg-kb-rose/90 hover:shadow-glow;
+  }
+
+  .btn-ghost {
+    @apply btn border border-kb-line text-kb-white hover:border-kb-rose/60 hover:text-kb-rose;
+  }
+
+  .link-rose {
+    @apply text-kb-rose hover:text-kb-roseSoft transition-colors;
+  }
+}
