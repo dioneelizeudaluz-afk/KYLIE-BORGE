@@ -6,7 +6,8 @@ Plataforma web privada de conteudo premium.
 
 - FASE 1 concluida: base tecnica, design system, rotas base, Landing, Age Gate, Planos (estrutura), 404.
 - FASE 2 concluida: cliente Supabase tipado, tipos Database, migrations SQL (schema + RLS + Storage + seed), servico de planos, `/plans` a consumir dados reais.
-- FASE 3 pendente: Auth (register, login, logout, reset, rotas protegidas, roles).
+- FASE 3 concluida: autenticacao (register, login, logout, reset de password), AuthContext + useAuth, ProtectedRoute, AdminRoute, AuthLayout.
+- FASE 4 pendente: Landing dinamica a partir de `platform_settings`, teaser, paywall.
 
 ## Stack
 
@@ -37,8 +38,6 @@ npm run dev
 - `npm run build` — build de producao via Vite (`vite build`)
 - `npm run preview` — pre-visualizacao do build
 
-Nota: o build usa apenas `vite build`. Nao usamos `tsc -b` nem `tsconfig.node.json`.
-
 ## Variaveis de ambiente
 
 Publicas (frontend):
@@ -47,52 +46,52 @@ Publicas (frontend):
 - `VITE_SUPABASE_ANON_KEY`
 
 A anon key e publica por design. A seguranca real vem do RLS.
-Secrets (EscalePay, service role key, etc.) NUNCA em `VITE_`. Apenas server-side.
+Secrets (EscalePay webhook, service role key, etc.) NUNCA em `VITE_`. Apenas server-side.
 
 ## Base de dados
 
 Migrations em `supabase/migrations/`:
 
-- `0001_init_schema.sql` — tabelas, FKs, indices, triggers
-- `0002_rls_policies.sql` — RLS + funcoes helper (`is_admin`, `user_max_plan_level`, `user_can_access_plan`)
-- `0003_storage_buckets.sql` — buckets + policies de storage
-- `0004_seed_defaults.sql` — planos base + `platform_settings`
+- `0001_init_schema.sql`
+- `0002_rls_policies.sql`
+- `0003_storage_buckets.sql`
+- `0004_seed_defaults.sql`
 
-Aplicar via Supabase CLI (`supabase db push`) ou colar no SQL editor do painel Supabase, por ordem.
+Aplicar via Supabase CLI (`supabase db push`) ou colar no SQL editor, por ordem.
 
-### Tabelas
+## Autenticacao
 
-`profiles`, `plans`, `subscriptions`, `contents`, `videos`, `photos`, `audios`, `access_codes`, `payments`, `platform_settings`.
+- `AuthProvider` em `src/auth/AuthContext.tsx`, com `useAuth()` em `src/auth/useAuth.ts`.
+- Sessoes geridas por Supabase Auth (persistSession + autoRefreshToken + detectSessionInUrl).
+- `ProtectedRoute` (exige sessao) e `AdminRoute` (exige `profile.role === 'admin'`).
+- Trigger SQL `handle_new_user` cria o profile automaticamente ao registar.
+- O campo `profiles.role` NAO e editavel pelo utilizador (bloqueado por RLS).
 
-### Hierarquia de planos
+### Rotas de autenticacao
 
-Coluna `plans.level` (0 free, 1 teste, 2 pro, 3 premium).
-`user_max_plan_level()` devolve o nivel maximo das subscriptions activas.
-`user_can_access_plan(required_plan_id)` valida acesso.
+- `/login`
+- `/register`
+- `/forgot-password`
+- `/reset-password` (link enviado por email)
 
-## Storage
+### Definir um admin
 
-Buckets:
+Depois de um utilizador estar registado, promover manualmente no SQL editor:
 
-- `videos` (privado)
-- `photos` (privado)
-- `audios` (privado)
-- `thumbnails` (privado)
-- `covers` (publico — capa da landing)
-
-Somente admin faz upload/delete nos buckets privados e `covers`.
-**Entrega de conteudo protegido ao utilizador final sera via Edge Function** (fase futura)
-que valida a subscription e devolve signed URL de curta duracao. Isto evita replicar
-logica de subscription dentro das policies de storage.
+```sql
+update public.profiles set role = 'admin' where user_id = '<uuid-do-user>';
+```
 
 ## Estrutura
 
 ```
 src/
+  auth/
   components/
     ui/
   layouts/
   pages/
+    auth/
   routes/
   services/
   lib/
@@ -108,14 +107,15 @@ supabase/
 
 - Preto profundo + rosa premium como destaque.
 - Sem roxo. Sem azul como cor principal.
-- Cards arredondados, glassmorphism discreto, microanimacoes suaves.
 - Mobile-first.
 
-## Rotas (FASE 2)
+## Rotas (FASE 3)
 
 - `/` — Landing
 - `/age-gate` — Confirmacao +18
 - `/plans` — Planos (dados reais da DB)
+- `/login`, `/register`, `/forgot-password`, `/reset-password` — Auth
+- `/dashboard` — Protegido (placeholder na FASE 3)
 - `*` — 404
 
 ## Seguranca
@@ -124,12 +124,16 @@ supabase/
 - Autorizacao real: RLS no Supabase.
 - Nunca confiar em estado de frontend ou localStorage para autorizacao.
 - `service_role key` nunca no frontend.
-- Signed URLs para conteudo protegido: apenas via Edge Function.
+- Signed URLs para conteudo protegido: apenas via Edge Function (fase futura).
 
 ## Pagamentos
 
 Integracao EscalePay sera implementada como camada arquitetural na FASE 10.
-Nenhuma API/endpoint/webhook sera inventado. Requer documentacao e credenciais oficiais.
+A documentacao oficial foi analisada. Webhook: POST JSON com assinatura HMAC-SHA256
+(`X-EscalePay-Signature`) ou token estatico (`X-Webhook-Secret`).
+Eventos previstos: `payment_confirmed`, `payment_pending`, `payment_refused`,
+`subscription_cancelled`, `subscription_reactivated`, `refund_completed`, `chargeback_received`.
+O backend aceitara ambos os headers por robustez. Campo `test: true` ignorado em producao.
 
 ## Build
 
