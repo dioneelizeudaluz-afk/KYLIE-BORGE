@@ -1,8 +1,21 @@
-import { Link, Outlet } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Logo from "../components/Logo";
 import Container from "../components/ui/Container";
+import { useAuth } from "../auth/useAuth";
 
 export default function PublicLayout() {
+  const { session, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  async function handleSignOut() {
+    try {
+      await signOut();
+      navigate("/", { replace: true });
+    } catch {
+      // ignora; sessao sera limpa na proxima renderizacao
+    }
+  }
+
   return (
     <div className="relative min-h-full bg-kb-black text-kb-white">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[600px] bg-kb-radial" />
@@ -15,13 +28,29 @@ export default function PublicLayout() {
               KYLIE BORGE
             </span>
           </Link>
+
           <nav className="hidden items-center gap-6 sm:flex">
             <Link to="/plans" className="text-sm text-kb-gray transition-colors hover:text-kb-rose">
               Planos
             </Link>
-            <Link to="/age-gate" className="btn-ghost text-sm">
-              Entrar
-            </Link>
+
+            {session ? (
+              <>
+                <Link
+                  to="/dashboard"
+                  className="text-sm text-kb-gray transition-colors hover:text-kb-rose"
+                >
+                  Dashboard
+                </Link>
+                <button type="button" onClick={handleSignOut} className="btn-ghost text-sm">
+                  Sair
+                </button>
+              </>
+            ) : (
+              <Link to="/login" className="btn-ghost text-sm">
+                Entrar
+              </Link>
+            )}
           </nav>
         </Container>
       </header>
