@@ -21,16 +21,19 @@ export default function PublicLayout() {
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[600px] bg-kb-radial" />
 
       <header className="relative z-10">
-        <Container className="flex items-center justify-between py-5">
-          <Link to="/" className="flex items-center gap-3">
-            <Logo variant="mark" className="h-10 w-10" />
-            <span className="font-display text-xl tracking-[0.35em] text-kb-white">
+        <Container className="flex items-center justify-between gap-3 py-4 sm:py-5">
+          <Link to="/" className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <Logo variant="mark" className="h-9 w-9 sm:h-10 sm:w-10" />
+            <span className="hidden font-display text-lg tracking-[0.3em] text-kb-white sm:inline sm:text-xl sm:tracking-[0.35em]">
               KYLIE BORGE
             </span>
           </Link>
 
-          <nav className="hidden items-center gap-6 sm:flex">
-            <Link to="/plans" className="text-sm text-kb-gray transition-colors hover:text-kb-rose">
+          <nav className="flex items-center gap-2 sm:gap-4">
+            <Link
+              to="/plans"
+              className="text-xs text-kb-gray transition-colors hover:text-kb-rose sm:text-sm"
+            >
               Planos
             </Link>
 
@@ -38,16 +41,23 @@ export default function PublicLayout() {
               <>
                 <Link
                   to="/dashboard"
-                  className="text-sm text-kb-gray transition-colors hover:text-kb-rose"
+                  className="text-xs text-kb-gray transition-colors hover:text-kb-rose sm:text-sm"
                 >
                   Dashboard
                 </Link>
-                <button type="button" onClick={handleSignOut} className="btn-ghost text-sm">
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="btn-ghost !px-3 !py-2 !text-xs sm:!px-6 sm:!py-3 sm:!text-sm"
+                >
                   Sair
                 </button>
               </>
             ) : (
-              <Link to="/login" className="btn-ghost text-sm">
+              <Link
+                to="/login"
+                className="btn-ghost !px-3 !py-2 !text-xs sm:!px-6 sm:!py-3 sm:!text-sm"
+              >
                 Entrar
               </Link>
             )}
