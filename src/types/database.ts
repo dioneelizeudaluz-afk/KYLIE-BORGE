@@ -50,6 +50,8 @@ export interface Database {
           permissions: Json;
           level: number;
           active: boolean;
+          checkout_url: string | null;
+          escalepay_product_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -64,6 +66,8 @@ export interface Database {
           permissions?: Json;
           level?: number;
           active?: boolean;
+          checkout_url?: string | null;
+          escalepay_product_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -78,6 +82,8 @@ export interface Database {
           permissions?: Json;
           level?: number;
           active?: boolean;
+          checkout_url?: string | null;
+          escalepay_product_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -316,6 +322,10 @@ export interface Database {
       user_max_plan_level: {
         Args: Record<string, never>;
         Returns: number;
+      };
+      redeem_access_code: {
+        Args: { code_input: string };
+        Returns: Json;
       };
     };
     Enums: Record<string, never>;
