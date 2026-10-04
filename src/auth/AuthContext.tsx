@@ -14,6 +14,7 @@ type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 
 export interface AuthContextValue {
   loading: boolean;
+  profileLoading: boolean;
   session: Session | null;
   user: User | null;
   profile: Profile | null;
@@ -33,25 +34,31 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
 
   const loadProfile = useCallback(async (userId: string) => {
-    const supabase = requireSupabase();
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("user_id", userId)
-      .maybeSingle();
+    setProfileLoading(true);
+    try {
+      const supabase = requireSupabase();
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", userId)
+        .maybeSingle();
 
-    if (error) {
-      console.error("[auth] erro a carregar profile:", error.message);
-      setProfile(null);
-      return;
+      if (error) {
+        console.error("[auth] erro a carregar profile:", error.message);
+        setProfile(null);
+        return;
+      }
+
+      setProfile(data ?? null);
+    } finally {
+      setProfileLoading(false);
     }
-
-    setProfile(data ?? null);
   }, []);
 
   const refreshProfile = useCallback(async () => {
@@ -143,6 +150,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const value = useMemo<AuthContextValue>(
     () => ({
       loading,
+      profileLoading,
       session,
       user,
       profile,
@@ -155,6 +163,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }),
     [
       loading,
+      profileLoading,
       session,
       user,
       profile,
