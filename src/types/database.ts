@@ -327,8 +327,8 @@ export interface Database {
         Args: { code_input: string };
         Returns: Json;
       };
-      admin_generate_codes: {
-        Args: { plan_slug_input: string; quantity_input: number };
+      reserve_code_by_plan: {
+        Args: { plan_slug_input: string };
         Returns: Json;
       };
     };
