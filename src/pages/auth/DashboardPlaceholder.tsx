@@ -1,8 +1,35 @@
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import Container from "../../components/ui/Container";
 import { useAuth } from "../../auth/useAuth";
+import {
+  getMyActiveSubscription,
+  type ActiveSubscription
+} from "../../services/subscriptionService";
 
 export default function DashboardPlaceholder() {
   const { user, profile, signOut } = useAuth();
+  const [active, setActive] = useState<ActiveSubscription | null>(null);
+  const [loadingActive, setLoadingActive] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getMyActiveSubscription()
+      .then((data) => {
+        if (!cancelled) setActive(data);
+      })
+      .catch(() => {
+        if (!cancelled) setActive(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingActive(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <section className="relative">
@@ -27,6 +54,44 @@ export default function DashboardPlaceholder() {
               <dd className="text-kb-white">{profile?.role ?? "-"}</dd>
             </div>
           </dl>
+
+          <div className="mt-8 border-t border-kb-line/60 pt-6">
+            <h2 className="text-xs uppercase tracking-[0.3em] text-kb-graySoft">
+              Subscricao
+            </h2>
+
+            {loadingActive && (
+              <p className="mt-3 text-sm text-kb-gray">A carregar...</p>
+            )}
+
+            {!loadingActive && !active && (
+              <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-kb-gray">Sem plano activo.</p>
+                <Link to="/redeem" className="btn-primary w-fit">
+                  Resgatar codigo
+                </Link>
+              </div>
+            )}
+
+            {!loadingActive && active && (
+              <div className="mt-3 flex flex-col gap-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-kb-gray">Plano</span>
+                  <span className="font-semibold text-kb-rose">{active.plan.name}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-kb-gray">Estado</span>
+                  <span className="text-kb-white">Activo</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-kb-gray">Expira em</span>
+                  <span className="text-kb-white">
+                    {active.daysRemaining} {active.daysRemaining === 1 ? "dia" : "dias"}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
 
           <button
             type="button"
