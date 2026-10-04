@@ -40,6 +40,12 @@ export default function PublicLayout() {
             {session ? (
               <>
                 <Link
+                  to="/redeem"
+                  className="hidden text-xs text-kb-gray transition-colors hover:text-kb-rose sm:inline sm:text-sm"
+                >
+                  Resgatar
+                </Link>
+                <Link
                   to="/dashboard"
                   className="text-xs text-kb-gray transition-colors hover:text-kb-rose sm:text-sm"
                 >
