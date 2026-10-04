@@ -4,11 +4,19 @@ Plataforma web privada de conteudo premium.
 
 ## Estado
 
-- FASE 1, 2, 3, 3.5, 8.1 concluidas.
-- FASE 9 concluida: Admin UI (`/admin`).
+- FASE 1 a 9 concluidas.
+- FASE 8.5 concluida (atribuicao automatica de codigos).
+- FASE 5 concluida: Upload de conteudos (video, foto, audio) no admin.
+- FASE 7 pendente: Biblioteca do cliente (ver conteudos).
 - FASE 4 pendente: Landing dinamica, teaser, paywall.
-- FASE 5 pendente: Upload de conteudos.
 - FASE 10 pendente: Webhook EscalePay.
+
+## Stack
+
+- React + TypeScript + Vite
+- Tailwind CSS v3
+- React Router v6
+- Supabase (auth, DB, storage)
 
 ## Instalacao
 
@@ -24,23 +32,33 @@ npm run dev
 - `npm run build`
 - `npm run preview`
 
+## Base de dados
+
+Migrations em `supabase/migrations/` (0001 a 0009).
+
 ## Admin
 
-Rota: `/admin`
-
 - `/admin` — Dashboard
-- `/admin/codes` — Codigos (gerar, listar, activar/desactivar, apagar)
+- `/admin/contents` — Upload e gestao de conteudos
+- `/admin/codes` — Codigos de acesso
 - `/admin/clients` — Clientes
 - `/admin/payments` — Pagamentos
-- `/admin/plans` — Planos (editar preco, descricao, checkout_url, estado)
+- `/admin/plans` — Planos
 
-Acesso apenas a utilizadores com `profiles.role = 'admin'`.
+## Upload de conteudos
 
-### Promover a admin
+- Buckets: `videos`, `photos`, `audios`, `thumbnails` (todos privados).
+- Nome do ficheiro no Storage = UUID (nunca o nome original).
+- Limites: video 50 MB, foto 10 MB, audio 50 MB, thumbnail 2 MB.
+- Tipos aceitos: `video/mp4|webm|quicktime`, `image/jpeg|png|webp`, `audio/mpeg|mp4|wav|ogg`.
+- `storage_path` guardado em `contents`.
+- Pre-visualizacao via signed URL (10 min).
 
-```sql
-update public.profiles set role = 'admin' where user_id = '<uuid>';
-```
+## Seguranca
+
+- RLS em todas as tabelas.
+- Upload restrito a admins (storage policies).
+- `service_role key` nunca no frontend.
 
 ## Build
 
