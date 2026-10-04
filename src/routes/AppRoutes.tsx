@@ -1,7 +1,9 @@
 import { Route, Routes } from "react-router-dom";
 import PublicLayout from "../layouts/PublicLayout";
 import AuthLayout from "../layouts/AuthLayout";
+import AdminLayout from "../admin/AdminLayout";
 import ProtectedRoute from "../components/ProtectedRoute";
+import AdminRoute from "../components/AdminRoute";
 import Landing from "../pages/Landing";
 import AgeGate from "../pages/AgeGate";
 import Plans from "../pages/Plans";
@@ -13,6 +15,11 @@ import Register from "../pages/auth/Register";
 import ForgotPassword from "../pages/auth/ForgotPassword";
 import ResetPassword from "../pages/auth/ResetPassword";
 import DashboardPlaceholder from "../pages/auth/DashboardPlaceholder";
+import AdminDashboard from "../pages/admin/AdminDashboard";
+import AdminCodes from "../pages/admin/AdminCodes";
+import AdminClients from "../pages/admin/AdminClients";
+import AdminPayments from "../pages/admin/AdminPayments";
+import AdminPlans from "../pages/admin/AdminPlans";
 
 export default function AppRoutes() {
   return (
@@ -29,6 +36,16 @@ export default function AppRoutes() {
         </Route>
 
         <Route path="*" element={<NotFound />} />
+      </Route>
+
+      <Route element={<AdminRoute />}>
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AdminDashboard />} />
+          <Route path="codes" element={<AdminCodes />} />
+          <Route path="clients" element={<AdminClients />} />
+          <Route path="payments" element={<AdminPayments />} />
+          <Route path="plans" element={<AdminPlans />} />
+        </Route>
       </Route>
 
       <Route element={<AuthLayout />}>
