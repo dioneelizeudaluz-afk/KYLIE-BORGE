@@ -14,23 +14,14 @@ Plataforma web privada de conteudo premium. Area publica + admin.
 ## 3. Estado
 
 - FASE 1, 2, 3, 3.5, 8.1 concluidas.
-- FASE 9 concluida:
-  - `src/admin/AdminLayout.tsx`.
-  - `src/pages/admin/AdminDashboard.tsx`.
-  - `src/pages/admin/AdminCodes.tsx`.
-  - `src/pages/admin/AdminClients.tsx`.
-  - `src/pages/admin/AdminPayments.tsx`.
-  - `src/pages/admin/AdminPlans.tsx`.
-  - `src/services/adminService.ts`.
-  - Rotas `/admin`, `/admin/codes`, `/admin/clients`, `/admin/payments`, `/admin/plans` protegidas por `AdminRoute`.
+- FASE 9 concluida: Admin UI (`/admin`) com Dashboard, Codigos, Clientes, Pagamentos, Planos.
 
 ## 4. Decisoes tecnicas
 
 - Admin UI usa RLS (nao confia no frontend).
 - `createCodes` chama a Edge Function `generate-codes` via `supabase.functions.invoke`.
-- Modais feitos inline (sem bibliotecas).
+- Modais feitos inline.
 - Clipboard via `navigator.clipboard`.
-- Slugs dos planos devem ser minusculos (normalizar com `update public.plans set slug = lower(slug);`).
 
 ## 5. Pendencias
 
