@@ -7,16 +7,18 @@ Plataforma web privada de conteudo premium.
 - FASE 1 concluida: base tecnica, design system, rotas base.
 - FASE 2 concluida: Supabase, migrations, RLS, Storage.
 - FASE 3 concluida: autenticacao completa.
-- FASE 3.5 concluida: checkout EscalePay (links), /checkout-return, /redeem, funcao SQL `redeem_access_code`, geracao de subscription a partir de codigo.
-- FASE 4 pendente: Landing dinamica via `platform_settings`, teaser, paywall.
+- FASE 3.5 concluida: checkout EscalePay + /redeem + funcao SQL `redeem_access_code`.
+- FASE 8.1 concluida: Edge Function `generate-codes` (geracao de codigos, apenas admin).
+- FASE 4 pendente: Landing dinamica, teaser, paywall.
+- FASE 9 pendente: Admin UI completo.
+- FASE 10 pendente: Webhook EscalePay (automacao total).
 
 ## Stack
 
 - React + TypeScript + Vite
 - Tailwind CSS v3
 - React Router v6
-- Supabase (cliente + auth + storage)
-- PostgreSQL (via Supabase)
+- Supabase (cliente + auth + storage + edge functions)
 
 ## Instalacao
 
@@ -33,13 +35,6 @@ npm run dev
 - `npm run build` — build de producao (`vite build`)
 - `npm run preview` — pre-visualizacao
 
-## Variaveis de ambiente
-
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
-
-Secrets (EscalePay webhook, service role) NUNCA em `VITE_`.
-
 ## Base de dados
 
 Migrations em `supabase/migrations/`:
@@ -52,48 +47,42 @@ Migrations em `supabase/migrations/`:
 - `0006_redeem_function.sql`
 - `0007_seed_checkout_urls.sql`
 
-Aplicar por ordem no SQL Editor do Supabase.
+## Edge Functions
 
-## Fluxo comercial (FASE 3.5)
+- `generate-codes` — gera codigos de acesso para um plano.
+  Instrucoes completas em `supabase/functions/README-EDGE.md`.
 
-1. Cliente em `/plans` clica "Escolher {plano}".
+## Fluxo comercial
+
+1. Cliente escolhe plano em `/plans`.
 2. Abre checkout EscalePay em nova aba.
-3. Apos pagamento, admin gera codigo (manual ou via webhook FASE 10).
-4. Cliente vai a `/redeem`, introduz o codigo `XXXX-XXXX-XXXX`.
-5. Funcao SQL `redeem_access_code` valida e cria `subscription` com duracao do plano.
-6. Acesso desbloqueado. Dashboard mostra plano activo e dias restantes.
-
-### Seguranca do resgate
-
-- A funcao `redeem_access_code` e `SECURITY DEFINER` com `search_path` fixo.
-- Usa `for update` para impedir resgate duplo em paralelo.
-- Valida: autenticacao, existencia, estado, expiracao, propriedade.
-- Formato armazenado: `X7KM92QPL4ZT` (12 caracteres, uppercase, sem hifens).
-- Formato exibido: `X7KM-92QP-L4ZT`.
+3. Admin gera codigo (Edge Function `generate-codes`, ou via painel Supabase).
+4. Admin envia codigo ao cliente.
+5. Cliente vai a `/redeem`, introduz o codigo.
+6. `redeem_access_code` cria `subscription` com duracao do plano.
+7. Acesso desbloqueado.
 
 ## Rotas
 
 - `/` — Landing
-- `/age-gate` — Confirmacao +18
-- `/plans` — Planos (dados reais)
-- `/checkout-return` — Retorno do checkout EscalePay
-- `/redeem` — Resgatar codigo de acesso
-- `/login`, `/register`, `/forgot-password`, `/reset-password` — Auth
+- `/age-gate` — +18
+- `/plans` — Planos
+- `/checkout-return` — Retorno EscalePay
+- `/redeem` — Resgatar codigo
+- `/login`, `/register`, `/forgot-password`, `/reset-password`
 - `/dashboard` — Protegido
 - `*` — 404
 
 ## Seguranca
 
-- Age Gate e barreira de UX.
-- Autorizacao real: RLS no Supabase.
+- RLS em todas as tabelas.
+- `redeem_access_code` e `SECURITY DEFINER` com `search_path = public`.
+- `generate-codes` verifica admin no servidor (JWT + `profiles.role`).
 - `service_role key` nunca no frontend.
-- Signed URLs para conteudo protegido: apenas via Edge Function (fase futura).
 
 ## Pagamentos
 
-EscalePay: webhook sera implementado na FASE 10. Doc analisada:
-HMAC-SHA256 (`X-EscalePay-Signature`) ou token (`X-Webhook-Secret`);
-backend aceitara ambos. Campo `test: true` ignorado em producao.
+EscalePay (checkout externo). Webhook sera implementado na FASE 10.
 
 ## Build
 
