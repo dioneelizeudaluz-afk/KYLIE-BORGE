@@ -16,6 +16,7 @@ import ForgotPassword from "../pages/auth/ForgotPassword";
 import ResetPassword from "../pages/auth/ResetPassword";
 import DashboardPlaceholder from "../pages/auth/DashboardPlaceholder";
 import AdminDashboard from "../pages/admin/AdminDashboard";
+import AdminContents from "../pages/admin/AdminContents";
 import AdminCodes from "../pages/admin/AdminCodes";
 import AdminClients from "../pages/admin/AdminClients";
 import AdminPayments from "../pages/admin/AdminPayments";
@@ -41,6 +42,7 @@ export default function AppRoutes() {
       <Route element={<AdminRoute />}>
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
+          <Route path="contents" element={<AdminContents />} />
           <Route path="codes" element={<AdminCodes />} />
           <Route path="clients" element={<AdminClients />} />
           <Route path="payments" element={<AdminPayments />} />
