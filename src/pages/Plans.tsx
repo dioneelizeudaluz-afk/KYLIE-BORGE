@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Container from "../components/ui/Container";
+import { useAuth } from "../auth/useAuth";
 import { listActivePlans, type Plan } from "../services/planService";
 
 type State =
@@ -20,12 +21,14 @@ function formatPrice(price: number, currency: string): string {
 }
 
 function formatDuration(hours: number): string {
+  if (hours <= 0) return "—";
   if (hours < 24) return `${hours}h`;
   const days = Math.round(hours / 24);
   return `${days} dias`;
 }
 
 export default function Plans() {
+  const { session } = useAuth();
   const [state, setState] = useState<State>({ status: "loading" });
 
   useEffect(() => {
@@ -86,36 +89,67 @@ export default function Plans() {
 
         {state.status === "ready" && state.plans.length > 0 && (
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {state.plans.map((plan) => (
-              <div
-                key={plan.id}
-                className="card-premium glass flex flex-col gap-4 p-6 transition-transform duration-300 hover:-translate-y-1 hover:shadow-glow"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-display text-2xl tracking-[0.2em] text-kb-white">
-                    {plan.name.toUpperCase()}
-                  </span>
-                  <span className="rounded-full border border-kb-rose/30 px-3 py-1 text-[10px] uppercase tracking-[0.25em] text-kb-roseSoft">
-                    {formatDuration(plan.duration_hours)}
-                  </span>
+            {state.plans.map((plan) => {
+              const isFree = Number(plan.price) <= 0;
+              const hasCheckout = Boolean(plan.checkout_url);
+              return (
+                <div
+                  key={plan.id}
+                  className="card-premium glass flex flex-col gap-4 p-6 transition-transform duration-300 hover:-translate-y-1 hover:shadow-glow"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-display text-2xl tracking-[0.2em] text-kb-white">
+                      {plan.name.toUpperCase()}
+                    </span>
+                    <span className="rounded-full border border-kb-rose/30 px-3 py-1 text-[10px] uppercase tracking-[0.25em] text-kb-roseSoft">
+                      {formatDuration(plan.duration_hours)}
+                    </span>
+                  </div>
+
+                  <div className="text-3xl font-semibold text-kb-rose">
+                    {formatPrice(Number(plan.price), plan.currency)}
+                  </div>
+
+                  {plan.description && (
+                    <p className="text-sm leading-relaxed text-kb-gray">{plan.description}</p>
+                  )}
+
+                  {isFree ? (
+                    <button className="btn-ghost mt-auto" type="button" disabled>
+                      Plano gratuito
+                    </button>
+                  ) : hasCheckout ? (
+                    <a
+                      href={plan.checkout_url ?? "#"}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn-primary mt-auto"
+                    >
+                      Escolher {plan.name}
+                    </a>
+                  ) : (
+                    <button className="btn-ghost mt-auto" type="button" disabled>
+                      Em breve
+                    </button>
+                  )}
                 </div>
+              );
+            })}
+          </div>
+        )}
 
-                <div className="text-3xl font-semibold text-kb-rose">
-                  {formatPrice(Number(plan.price), plan.currency)}
-                </div>
-
-                {plan.description && (
-                  <p className="text-sm leading-relaxed text-kb-gray">{plan.description}</p>
-                )}
-
-                <button className="btn-primary mt-auto" type="button" disabled>
-                  Escolher {plan.name}
-                </button>
-                <p className="text-center text-[10px] uppercase tracking-[0.25em] text-kb-graySoft">
-                  Checkout na proxima fase
-                </p>
-              </div>
-            ))}
+        {state.status === "ready" && state.plans.length > 0 && (
+          <div className="mt-10 text-center text-sm text-kb-gray">
+            Ja tens um codigo de acesso?{" "}
+            {session ? (
+              <Link to="/redeem" className="link-rose">
+                Resgatar aqui
+              </Link>
+            ) : (
+              <Link to="/login" state={{ from: "/redeem" }} className="link-rose">
+                Entra e resgata aqui
+              </Link>
+            )}
           </div>
         )}
 
