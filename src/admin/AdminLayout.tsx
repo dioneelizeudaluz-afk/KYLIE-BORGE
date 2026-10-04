@@ -11,6 +11,7 @@ interface MenuItem {
 
 const items: MenuItem[] = [
   { to: "/admin", label: "Dashboard", end: true },
+  { to: "/admin/contents", label: "Conteudos" },
   { to: "/admin/codes", label: "Codigos" },
   { to: "/admin/clients", label: "Clientes" },
   { to: "/admin/payments", label: "Pagamentos" },
