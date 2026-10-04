@@ -327,6 +327,10 @@ export interface Database {
         Args: { code_input: string };
         Returns: Json;
       };
+      admin_generate_codes: {
+        Args: { plan_slug_input: string; quantity_input: number };
+        Returns: Json;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
