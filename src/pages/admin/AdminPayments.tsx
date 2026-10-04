@@ -49,8 +49,7 @@ export default function AdminPayments() {
       <div>
         <h1 className="font-display text-3xl tracking-[0.25em] text-kb-white">PAGAMENTOS</h1>
         <p className="mt-2 text-sm text-kb-gray">
-          Integracao EscalePay via webhook na FASE 10. Ate la, os pagamentos podem ficar
-          vazios.
+          Integracao EscalePay via webhook na FASE 10.
         </p>
       </div>
 
