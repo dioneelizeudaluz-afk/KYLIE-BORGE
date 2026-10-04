@@ -6,6 +6,8 @@ import Landing from "../pages/Landing";
 import AgeGate from "../pages/AgeGate";
 import Plans from "../pages/Plans";
 import NotFound from "../pages/NotFound";
+import CheckoutReturn from "../pages/CheckoutReturn";
+import Redeem from "../pages/Redeem";
 import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
 import ForgotPassword from "../pages/auth/ForgotPassword";
@@ -19,6 +21,8 @@ export default function AppRoutes() {
         <Route path="/" element={<Landing />} />
         <Route path="/age-gate" element={<AgeGate />} />
         <Route path="/plans" element={<Plans />} />
+        <Route path="/checkout-return" element={<CheckoutReturn />} />
+        <Route path="/redeem" element={<Redeem />} />
 
         <Route element={<ProtectedRoute />}>
           <Route path="/dashboard" element={<DashboardPlaceholder />} />
