@@ -171,8 +171,9 @@ export interface CreateCodesResult {
 export async function createCodes(planSlug: string, quantity: number): Promise<CreateCodesResult> {
   const supabase = requireSupabase();
 
-  const { data, error } = await supabase.functions.invoke("generate-codes", {
-    body: { plan_slug: planSlug, quantity }
+  const { data, error } = await supabase.rpc("admin_generate_codes", {
+    plan_slug_input: planSlug,
+    quantity_input: quantity
   });
 
   if (error) {
