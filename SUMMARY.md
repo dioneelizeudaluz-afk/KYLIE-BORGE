@@ -1,101 +1,73 @@
 # SUMMARY — KYLIE BORGE
 
-Documento para continuidade por outra sessao de IA.
-
 ## 1. Visao geral
 
-Plataforma web privada de conteudo premium, com area publica/cliente e area administrativa.
+Plataforma web privada de conteudo premium. Area publica/cliente + area admin.
 
 ## 2. Stack
 
 - React + TypeScript + Vite
 - Tailwind CSS v3
 - React Router v6
-- Supabase (cliente, auth, storage)
-- PostgreSQL (via Supabase)
+- Supabase (auth, DB, storage)
+- PostgreSQL
 
-## 3. Estado actual
+## 3. Estado
 
-- FASE 1 concluida.
-- FASE 2 concluida.
-- FASE 3 concluida:
-  - `src/auth/AuthContext.tsx` + `src/auth/useAuth.ts`.
-  - `src/services/profileService.ts` (`getProfile`, `updateProfile`).
-  - `src/components/LoadingScreen.tsx`, `src/components/ProtectedRoute.tsx`, `src/components/AdminRoute.tsx`.
-  - `src/layouts/AuthLayout.tsx`.
-  - `src/pages/auth/Login.tsx`, `Register.tsx`, `ForgotPassword.tsx`, `ResetPassword.tsx`, `DashboardPlaceholder.tsx`.
-  - `src/layouts/PublicLayout.tsx` com estado de sessao.
-  - `src/routes/AppRoutes.tsx` actualizado.
-  - `src/App.tsx` envolve com `AuthProvider`.
+- FASE 1, 2, 3 concluidas.
+- FASE 3.5 concluida:
+  - Coluna `plans.checkout_url` e `plans.escalepay_product_id`.
+  - Migrations `0005_plans_checkout.sql`, `0006_redeem_function.sql`, `0007_seed_checkout_urls.sql`.
+  - Funcao SQL `redeem_access_code(code_input text) returns json` — `SECURITY DEFINER`, `for update` na chave, valida autenticacao/estado/expiracao/propriedade. Normaliza com `upper(replace(trim(code), '-', ''))`.
+  - Servico `src/services/accessCodeService.ts` (`redeemCode`, `listMyCodes`, `formatCodeForDisplay`, `REDEEM_ERROR_MESSAGES`).
+  - Servico `src/services/subscriptionService.ts` (`getMyActiveSubscription` com `daysRemaining`).
+  - Paginas `/redeem` e `/checkout-return`.
+  - `Plans.tsx` com CTA de checkout (abre `checkout_url` em nova aba) e fallback "Em breve" quando sem URL.
+  - `DashboardPlaceholder` com bloco de subscricao activa.
+  - `PublicLayout` com link "Resgatar" para utilizadores autenticados (escondido em mobile por espaco).
 
-## 4. Decisoes tecnicas
+## 4. Fluxo
 
-- `AuthProvider` subscreve `onAuthStateChange` ANTES de `getSession()` (evita race condition).
-- `useAuth` lanca erro claro se usado fora do provider.
-- `ProtectedRoute` guarda `state.from` para redireccionar de volta apos login.
-- `AdminRoute` verifica `profile.role === 'admin'`.
-- `updateProfile` NUNCA envia `role` no payload.
-- `detectSessionInUrl: true` permite que `/reset-password` funcione com o link do email.
-- `/reset-password` mostra mensagem de link invalido se nao houver sessao.
+Cliente escolhe plano -> checkout EscalePay (nova aba) -> paga -> admin gera codigo (manual agora, automatico na FASE 10) -> cliente autenticado vai a `/redeem` -> funcao SQL valida e cria `subscription` com `expires_at = now() + duration_hours` -> dashboard mostra plano activo.
 
-## 5. Schema (inalterado desde FASE 2)
+## 5. Seguranca
 
-Tabelas: `profiles`, `plans`, `subscriptions`, `contents`, `videos`, `photos`, `audios`, `access_codes`, `payments`, `platform_settings`.
+- `redeem_access_code` e `SECURITY DEFINER` com `search_path = public`.
+- `for update` evita duplo resgate.
+- Sem confianca no frontend para autorizacao.
+- `checkout_url` e apenas um link externo (nada e marcado como pago no frontend).
+- `/checkout-return` NAO cria subscription. So `/redeem` cria, via SQL.
 
-## 6. Rotas
+## 6. Formato da chave
 
-- `/` — Landing
-- `/age-gate` — Confirmacao +18
-- `/plans` — Planos
-- `/login`, `/register`, `/forgot-password`, `/reset-password` — Auth
-- `/dashboard` — Protegido (placeholder)
-- `*` — 404
+- Armazenado: `X7KM92QPL4ZT` (12 chars, uppercase, sem hifens).
+- Exibido: `X7KM-92QP-L4ZT`.
+- `formatCodeForDisplay` faz a mascara no cliente.
 
-## 7. Definir admin
+## 7. Proximos passos
 
-```sql
-update public.profiles set role = 'admin' where user_id = '<uuid>';
-```
-
-## 8. EscalePay — estado
-
-Documentacao analisada:
-
-- Webhook: `POST application/json`.
-- Auth: HMAC-SHA256 (`X-EscalePay-Signature`) OU token estatico (`X-Webhook-Secret`). Ambiguidade na doc → backend aceitara ambos.
-- Eventos: `payment_confirmed`, `payment_pending`, `payment_refused`, `subscription_cancelled`, `subscription_reactivated`, `refund_completed`, `chargeback_received`.
-- Payload base: `{ event, order_id, timestamp, source, version, webhook_id, test, customer, product, payment, order_bumps }`.
-- Teste: numeros `258840000001` (confirmado), `258840000002` (pendente), `258840000003–008` (recusado). Campo `test: true` identifica-os.
-- Reenvios: ate 3 tentativas (5, 30, 60 min).
-- API REST existe (Bearer Token) mas endpoints nao vistos na doc.
-
-Pendencias:
-
-- `product.id` real de cada produto EscalePay (para mapear em `plans.escalepay_product_id`).
-- Se o URL de checkout aceita `?ref=` ou metadata.
-- Envio de email (codigo de acesso) — servico a definir.
-
-## 9. Proximos passos
-
-- FASE 3.5: `plans.checkout_url`, `/checkout-return`, `/redeem`, funcao SQL `redeem_access_code`.
 - FASE 4: Landing dinamica via `platform_settings`, teaser, paywall.
-- FASE 5: Conteudos (upload, Storage, signed URLs via Edge Function).
+- FASE 5: Conteudos (upload, signed URLs via Edge Function).
 - FASE 6: Subscriptions + permissao central.
-- FASE 7: Dashboard, library, player, profile.
-- FASE 8: Codes (geracao, activacao, expiracao).
+- FASE 7: Dashboard completo, library, player.
+- FASE 8: Codes (geracao no admin).
 - FASE 9: Admin completo.
 - FASE 10: Webhook EscalePay (Edge Function) + geracao automatica de codigo.
-- FASE 11: Videochamadas (arquitectura).
+- FASE 11: Videochamadas.
 - FASE 12: Seguranca, responsivo, performance.
-- FASE 13: README/SUMMARY finais.
 
-## 10. Regras a respeitar
+## 8. Pendencias
 
-- Nao inventar APIs, endpoints, webhooks, credenciais.
+- `plans.escalepay_product_id` em NULL — preencher quando IDs reais forem conhecidos.
+- Envio de email (codigo) — servico a definir.
+- Admin UI para gerar/gerir codigos (FASE 9).
+
+## 9. Regras
+
+- Nao inventar APIs, endpoints, credenciais.
 - Nao hardcode de precos nos componentes.
-- Autorizacao real apenas no Supabase (RLS).
-- Mobile-first.
-- Nao usar roxo; azul nao e cor principal.
-- Conteudo protegido: sempre via signed URLs (Edge Function).
-- Aceitar ambos os headers da EscalePay por robustez (doc tem inconsistencia).
+- Autorizacao real: RLS.
+- Mobile-first. Sem roxo.
+- Conteudo protegido via signed URLs (Edge Function).
+- Aceitar ambos os headers EscalePay por robustez.
 - Ignorar `test: true` em producao.
