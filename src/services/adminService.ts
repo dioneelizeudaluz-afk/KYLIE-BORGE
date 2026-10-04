@@ -168,28 +168,69 @@ export interface CreateCodesResult {
   details?: string;
 }
 
-export async function createCodes(planSlug: string, quantity: number): Promise<CreateCodesResult> {
+const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
+function generateCodeRaw(): string {
+  const bytes = new Uint8Array(12);
+  crypto.getRandomValues(bytes);
+  let out = "";
+  for (let i = 0; i < 12; i += 1) {
+    out += CODE_ALPHABET[bytes[i] % CODE_ALPHABET.length];
+  }
+  return out;
+}
+
+function formatCodeDisplay(raw: string): string {
+  return `${raw.slice(0, 4)}-${raw.slice(4, 8)}-${raw.slice(8, 12)}`;
+}
+
+export async function createCodes(
+  planSlug: string,
+  quantity: number
+): Promise<CreateCodesResult> {
   const supabase = requireSupabase();
 
-  const { data, error } = await supabase.rpc("admin_generate_codes", {
-    plan_slug_input: planSlug,
-    quantity_input: quantity
-  });
+  const { data: plan, error: planError } = await supabase
+    .from("plans")
+    .select("id, slug, name, active")
+    .eq("slug", planSlug)
+    .maybeSingle();
 
-  if (error) {
-    return { ok: false, error: "FALHA_NA_FUNCAO", details: error.message };
+  if (planError) {
+    return { ok: false, error: "ERRO_A_CONSULTAR_PLANO", details: planError.message };
+  }
+  if (!plan) return { ok: false, error: "PLANO_NAO_ENCONTRADO" };
+  if (!plan.active) return { ok: false, error: "PLANO_INACTIVO" };
+
+  const rawCodes: string[] = [];
+  const seen = new Set<string>();
+
+  let attempts = 0;
+  while (rawCodes.length < quantity && attempts < quantity * 10) {
+    attempts += 1;
+    const candidate = generateCodeRaw();
+    if (seen.has(candidate)) continue;
+    seen.add(candidate);
+    rawCodes.push(candidate);
   }
 
-  const payload = data as { ok?: boolean; codes?: string[]; error?: string; details?: string };
-  if (!payload || payload.ok !== true) {
-    return {
-      ok: false,
-      error: payload?.error ?? "ERRO_DESCONHECIDO",
-      details: payload?.details
-    };
+  const rows = rawCodes.map((code) => ({
+    code,
+    plan_id: plan.id,
+    status: "available" as const
+  }));
+
+  const { data: inserted, error: insertError } = await supabase
+    .from("access_codes")
+    .insert(rows)
+    .select("code");
+
+  if (insertError) {
+    return { ok: false, error: "ERRO_A_INSERIR", details: insertError.message };
   }
 
-  return { ok: true, codes: payload.codes ?? [] };
+  const codes = (inserted ?? []).map((r) => formatCodeDisplay((r as { code: string }).code));
+  return { ok: true, codes };
 }
 
 export async function setCodeStatus(
